@@ -1,0 +1,278 @@
+<div role="tabpanel" class="tab-pane" id="student">
+	<form class="form-horizontal" id="siteStudentForm">
+		<div class="form-group">
+		  <label class="col-lg-2 control-label">Select Site</label>
+		  <div class="col-lg-4">
+			<div class="input-group">
+				<select class="form-control" name="siteLongId"></select>
+				<span class="input-group-btn">
+					<div class="btn btn-primary" id="siteStudentFormBtn">Select</div>
+				</span>
+			</div>
+		  </div>
+		  <div class="col-lg-6">
+			<div class="btn btn-info btn-lg pull-right" id="siteStudentAddEditBtn"><span class="glyphicon glyphicon-floppy-saved"></span> Save Excel Table</div>&nbsp;
+			<div class="btn btn-default btn-lg pull-right" data-toggle="modal" data-target="#studentSearchAssessorModal" id="studentSearchAssessorBtn"><span class="glyphicon glyphicon-search"></span> Search Asssessor</div>
+		  </div>
+		</div>
+	</form>
+
+	<div id="hotStudents"></div>
+</div>
+<include href="coordinator_studentSearchAssessor.htm"/>
+<script>
+$(function(){
+	//LOAD SITE LIST
+	var totalSiteSelectOption = -1;
+	var studentAssessorEmail = [];
+	
+	function successLoadSite(data){
+		if (totalSiteSelectOption != data.length){
+			if (data[0] == 'failSession'){
+				alert(data[1]);
+				location.reload(true);
+			}
+			
+			totalSiteSelectOption = data.length;
+			
+			var loadContainer = $('#siteStudentForm select');
+			loadContainer.empty();
+			
+			$('<option>')
+			.attr('value', '-1')
+			.html(' -- Select Site --')
+			.appendTo(loadContainer);
+
+			$(data).each(function(index, value){	
+				$('<option>')
+				.attr('value', value.siteLongId)
+				.html(value.name)
+				.appendTo(loadContainer);
+			});
+			
+			//INITIALIZED WITH EMPTY EXCEL
+			successLoadSiteStudent([]);
+		}
+	}
+	
+	function successLoadAssessor(json){
+		studentAssessorEmail = _.map(json, function(o){return o.email;});
+	}
+	
+	$('#studentTab').bind('click', function(){
+		$.post(
+			'/coordinator/siteList',
+			null,
+			successLoadSite,
+			'json'
+		);
+		$.post(
+			'/coordinator/assessorList',
+			null,
+			successLoadAssessor,
+			'json'
+		);
+	});
+	
+	
+	
+	
+	
+	var studentBySiteRecordOri=[];
+	var studentBySiteRecord=[];
+	var studentHasChanges=false;
+	
+	//LOAD STUDENT LIST CORRESPONDING WITH SELECTED SITE
+	var
+	excelHeaderStudent=[
+		"Student Id",
+		"First Name",
+		"Last Name",
+		"Email",
+		"Project Id",
+		"Assessor Email 1",
+		"Assessor Email 2",
+		"Assessor Email 3",
+		headerChecker('invitation','Invitation'),
+		headerChecker('delete','Delete')
+	],
+	excelColumnStudent=[
+		{data:"id",width: 90},
+		{data:"fname",width: 100},
+		{data:"lname",width: 100},
+		{data:"studentEmail",width: 150},
+		{data:"projectId",width: 90},
+		{data:"assessorEmail1",width: 150},
+		{data:"assessorEmail2",width: 150},
+		{data:"assessorEmail3",width: 150},
+		{data:'invitation', type: 'checkbox'},
+		{data:'delete', type: 'checkbox'}
+	],
+	afterChangeStudent = function(changes, source) {
+		if (changes){
+			studentHasChanges = true;
+		}
+	};
+	var hotStudents = cm.initHotExcel($('#hotStudents')[0], excelHeaderStudent, excelColumnStudent, afterChangeStudent);
+	
+	/*hotStudents.on('mouseup', 'input.checker', function (event) {
+        var current = !$('input.checker').is(':checked'); //returns boolean
+            for (var i = 0, ilen = studentBySiteRecord.length; i < ilen; i++) {
+                studentBySiteRecord[i].delete.active = current;
+            }
+        hotStudents.handsontable('render');
+    });*/
+	Handsontable.Dom.addEvent($('#hotStudents')[0], 'mouseup', function (event) {
+		processChecker('delete', event);
+		processChecker('invitation', event);
+	});
+
+	function processChecker(type, event){
+		if (event.target.nodeName == 'INPUT' && event.target.className == 'checker'+type) {
+		  console.log( $('.checker'+type).prop('checked'));
+		  var current = !event.target.checked;
+		  //$('#checker'+type).prop('checked', current);
+		  document.getElementById('checker'+type).checked = current;
+		  console.log( $('.checker'+type).prop('checked'));
+		  console.log( $('.checker'+type).is(":checked"));
+		  $('.checker'+type).addClass('checked');
+		  if ($('.checker'+type).is(":checked") != current){
+			$('#checker'+type).prop('checked', current);
+		  }
+		  console.log( $('.checker'+type).prop('checked'));
+		  for (var i = 0, ilen = studentBySiteRecord.length; i < ilen; i++) {
+            studentBySiteRecord[i][type] = current;
+          }
+		  hotStudents.render();
+		}
+	}
+	function headerChecker(classN, labelN){
+		var txt = "<input type='checkbox' id='checker"+classN+"' class='checker"+classN+"' ";
+		txt += isChecked(classN) ? 'checked="checked"' : '';
+		txt += "> "+labelN;
+		return txt;	
+	}
+    function isChecked(classN) {
+        for (var i = 0, ilen = studentBySiteRecord.length; i < ilen; i++) {
+            if (!studentBySiteRecord[i][classN]) {
+                return false;
+            }
+        }
+        return (studentBySiteRecord.length != 0);
+    }
+	
+	function successLoadSiteStudent(data){
+		if (data[0] == 'failSession'){
+			alert(data[1]);
+			location.reload();
+		}
+		
+		if (data.length == 0){
+			data = [{id:'', fname:'',lname:'', studentEmail:'', projectId:'',assessorEmail1:'', assessorEmail2:'', assessorEmail3:'', invitation:false, delete:false}];
+		}else{
+			//ALERT FRIENDLY MESSAGE
+			cm.alert('Success', 'Data successfully loaded!');
+		}
+		
+		studentBySiteRecordOri=_.cloneDeep(data);
+		studentBySiteRecord=data;
+		hotStudents.loadData(studentBySiteRecord);
+		studentHasChanges = false;
+	}
+	
+	$('#siteStudentFormBtn').bind('click', function(){
+		var siteLongId = cm.inSelVal('#siteStudentForm', 'siteLongId');
+		
+		$.post(
+			'/coordinator/studentList',
+			{siteLongId:siteLongId},
+			successLoadSiteStudent,
+			'json'
+		);
+	});
+	
+	$('#siteStudentAddEditBtn').bind('click', function(){
+		console.log(studentHasChanges);
+		if (confirm('Are you sure you want to save the data?')){
+		//if (studentHasChanges){
+			//CHECK VALID ASSESSOR EMAIL
+			var invalidEmailArr = checkIfEmailExistsInSystem(studentBySiteRecord, studentAssessorEmail);
+			
+			if (invalidEmailArr.length > 0){
+				cm.alert('Warning', invalidEmailArr[0] + ' is an invalid assessor email');
+				hotStudents.search.query(invalidEmailArr[0]);
+				hotStudents.render();
+				return;
+			}
+			
+			//CHECK DUPLICATE STUDENT ID
+			var duplicateId = checkDuplicateRecordByColumn(studentBySiteRecord, 'id');
+			var duplicateEmail = checkDuplicateRecordByColumn(studentBySiteRecord, 'studentEmail');
+			var emailModifiedArr = [];
+			var siteLongId = cm.inSelVal('#siteStudentForm', 'siteLongId');
+			/*console.log('############');
+			console.log(studentBySiteRecordOri);
+			console.log(studentBySiteRecord);
+			if (studentBySiteRecordOri.length != studentBySiteRecord.length){
+				emailModifiedArr = _.difference(
+					_.map(studentBySiteRecordOri, 'studentEmail'),
+					_.map(studentBySiteRecord, 'studentEmail')
+				);
+			}
+			
+			if (emailModifiedArr.length > 0){
+				cm.alert('Warning', 'Email should not be edited. Please revert the changes!');
+			
+			}else 
+			*/
+				console.log(duplicateId);
+				console.log(duplicateEmail);
+			if (siteLongId == -1){
+				cm.alert('Warning', 'Please select site!');
+			
+			}else if (!duplicateId && !duplicateEmail){//SUBMIT DATA
+				var postData = {
+					siteLongId:siteLongId,
+					student:studentBySiteRecord
+				};
+				console.log(postData);
+				$.post(
+					'/coordinator/studentAddEdit',
+					JSON.stringify(postData),
+					successLoadSiteStudent,
+					'json'
+				);
+			}else{
+				cm.alert('Warning', 'Please make sure the id and student email are not duplicated!');
+			}
+		//}
+		}
+	});
+	
+	function checkIfEmailExistsInSystem(enteredEmail, systemEmail){
+		var invalidEmail = [];
+		var assessorEmailArr = _.uniq(_.concat(
+			_.map(enteredEmail, 'assessorEmail1'),
+			_.map(enteredEmail, 'assessorEmail2'),
+			_.map(enteredEmail, 'assessorEmail3')
+		));
+		console.log(systemEmail);
+		console.log(assessorEmailArr);
+		_.every(assessorEmailArr, function(email){
+			if (_.indexOf(systemEmail, email) == -1 && email !== null && email != '' && typeof email != 'undefined'){
+				invalidEmail.push(email);
+			}
+			return true;
+		});
+		
+		return invalidEmail;
+	}
+	
+	function checkDuplicateRecordByColumn(rec, col){
+		var idArr = _.filter(_.map(rec, col), function(v){return v!=null;});
+		var uniqArr =  _.uniq(idArr);
+		
+		return uniqArr.length != idArr.length;
+	}
+});
+</script>

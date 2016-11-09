@@ -1,0 +1,93 @@
+
+<div role="tabpanel" class="tab-pane" id="assessor">
+	<div class="col-lg-12">
+		<div class="btn btn-info btn-lg pull-right" id="assessorAddEditBtn"><span class="glyphicon glyphicon-floppy-saved"></span> Save Excel Table</div>
+	</div>
+	<div class="col-lg-12 col-xs-12">
+		<div id="hotAssessors"></div>
+	</div>
+</div>
+<script>
+$(function(){	
+	//LOAD ASSESSOR LIST	
+	var
+	excelHeaderAssessor=[
+		"First Name",
+		"Last Name",
+		"Email",
+		"Invitation",
+		"Delete"
+	],
+	excelColumnAssessor=[
+		{data:"fname",width: 100},
+		{data:"lname",width: 100},
+		{data:"email",width: 200},
+		{data:'invitation', type: 'checkbox'},
+		{data:'delete', type: 'checkbox'}
+	],
+	afterChangeAssessor = function(changes, source) {
+		if (changes){
+			assessorHasChanges = true;
+		}
+	};
+	var hotAssessors = cm.initHotExcel($('#hotAssessors')[0], excelHeaderAssessor, excelColumnAssessor, afterChangeAssessor);
+	var assessorBySiteRecord=[];
+	var assessorHasChanges=false;
+	var initialLoadAssessor=true;
+	
+	function successLoadSiteAssessor(data){
+		if (data.length == 0){
+			data = [{fname:'', lname:'', email:'', invitation:false, delete:false}];
+		}else{
+			//ALERT FRIENDLY MESSAGE
+			cm.alert('Success', 'Data successfully loaded!');
+		}
+		
+		assessorBySiteRecord=data;
+		hotAssessors.loadData(assessorBySiteRecord);
+		assessorHasChanges = false;
+	}
+	
+	//$('#siteAssessorFormBtn').bind('click', function(){
+		
+		$('#assessorTab').bind('click', function(){
+			if (initialLoadAssessor){
+				initialLoadAssessor = false;
+				$.post(
+					'/coordinator/assessorList',
+					null,
+					successLoadSiteAssessor,
+					'json'
+				);
+			}
+		});
+	
+	$('#assessorAddEditBtn').bind('click', function(){
+		if (assessorHasChanges){
+			//CHECK DUPLICATE ASSESSOR ID
+			var duplicateEmail = false;
+			
+			var emailArr = _.filter(_.map(assessorBySiteRecord, 'email'), function(v){return v!=null;});
+			
+			if (_.uniq(emailArr).length != emailArr.length){
+				duplicateEmail = true;
+			}
+			
+			//SUBMIT DATA
+			if (!duplicateEmail){
+				var postData = {
+					assessor:assessorBySiteRecord
+				};
+				$.post(
+					'/coordinator/assessorAddEdit',
+					JSON.stringify(assessorBySiteRecord),
+					successLoadSiteAssessor,
+					'json'
+				);
+			}else{
+				cm.alert('Warning', 'Please make sure the Ids are not duplicated!');
+			}
+		}
+	});
+});
+</script>

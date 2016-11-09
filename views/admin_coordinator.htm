@@ -1,0 +1,151 @@
+
+<div class="modal fade" id="addCoordinatorModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel"><span id="ccAction"></span> Course Coordinator</h4>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" id="coordinatorForm">
+			<!--div class="form-group">
+			  <label for="inputEmail" class="col-lg-4 control-label">Unikey</label>
+			  <div class="col-lg-8">
+				<input type="text" class="form-control" name="id" placeholder="Unikey" required>
+			  </div>
+			</div-->
+			<div class="form-group">
+			  <label for="inputEmail" class="col-lg-4 control-label">Email</label>
+			  <div class="col-lg-8">
+				<input type="email" class="form-control" name="email" placeholder="Email" disabled>
+			  </div>
+			</div>
+			<div class="form-group">
+			  <label for="inputEmail" class="col-lg-4 control-label">First Name</label>
+			  <div class="col-lg-8">
+				<input type="text" class="form-control" name="fname" placeholder="First Name" required>
+				<input type="text" class="hide" name="userLongId">
+			  </div>
+			</div>
+			<div class="form-group">
+			  <label for="inputEmail" class="col-lg-4 control-label">Last Name</label>
+			  <div class="col-lg-8">
+				<input type="text" class="form-control" name="lname" placeholder="Last Name" required>
+			  </div>
+			</div>
+		</form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" id="addCoordinatorModalBtn">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+$(function(){
+	
+	$('#addCoordinatorBtn').bind('click', function(){
+		var id='#coordinatorForm';
+		cm.inValEmpty(id, ['userLongId', 'fname', 'lname', 'email']);
+		$(id+' input[name=email]').removeAttr('disabled');
+		$('#ccAction').html('Add');
+		$('#addCoordinatorModalBtn').html('Add New');
+	});
+	
+	$('#addCoordinatorModalBtn').bind('click', function(){
+		var id='#coordinatorForm';
+		var postData = {
+			userLongId:cm.inVal(id, 'userLongId'),
+			fname:cm.inVal(id, 'fname'),
+			lname:cm.inVal(id, 'lname'),
+			email:cm.inVal(id, 'email')
+		};
+		
+		$.post(
+			'/admin/coordinatorAddEdit',
+			//JSON.stringify(postData),
+			postData,
+			reloadCoordinatorList,
+			'json'
+		);
+		
+		cm.inValEmpty(id, ['userLongId', 'fname', 'lname', 'email']);
+	});
+	
+	$.post(
+		'/admin/coordinatorList',
+		null,
+		reloadCoordinatorList,
+		'json'
+	);
+});
+
+function reloadCoordinatorList(json){
+	if (json[0] == 'fail'){
+		var alertDanger = $('#alertDanger').clone();
+		alertDanger.attr('id', '').removeClass('hide');
+		
+		var msg = alertDanger.find('.message');
+		msg.html(json[1]);
+		
+		alertDanger.appendTo($('#alertHolder')[0]);
+		
+		return;
+	}
+	
+	var dataArray = (json instanceof Object) ? json : JSON.parse(json);
+	var listHolder = $('#coordinateTbl tbody');
+	listHolder.empty();
+	
+	_.forEach(dataArray, function(o, k){
+		var tr = $('<tr>');
+		var td;
+				
+		td = $('<td>');
+		td.html(o.fname);
+		td.appendTo(tr);
+		
+		td = $('<td>');
+		td.html(o.lname);
+		td.appendTo(tr);
+		
+		td = $('<td>');
+		td.html(o.email);
+		td.appendTo(tr);
+		
+		td = $('<td><button class="btn btn-success" data-toggle="modal" data-target="#addCoordinatorModal"><span class="glyphicon glyphicon-edit"></span></button></td>');
+		td.attr('onclick', 'editCoordinator("'+o.userLongId+'","'+o.fname+'","'+o.lname+'","'+o.email+'")');
+		td.appendTo(tr);
+		
+		td = $('<td><button class="btn btn-danger"><span class="glyphicon glyphicon-trash"></span></button></td>');
+		td.attr('onclick', 'deleteCoordinator("'+o.userLongId+'")');
+		td.appendTo(tr);
+		
+		tr.appendTo(listHolder);
+	});
+}
+
+function editCoordinator(userLongId, fname, lname, email){
+	var id='#coordinatorForm';
+	cm.setInVal(id, 'userLongId', userLongId);
+	cm.setInVal(id, 'fname', fname);
+	cm.setInVal(id, 'lname', lname);
+	cm.setInVal(id, 'email', email);
+	$(id+' input[name=email]').attr('disabled', '');
+	$('#ccAction').html('Edit');
+	$('#addCoordinatorModalBtn').html('Save changes');
+}
+
+function deleteCoordinator(userLongId){
+	if (confirm('Are you sure to delete this course coordinator?')){
+		$.post(
+			'/admin/coordinatorDelete',
+			{userLongId:userLongId},
+			reloadCoordinatorList,
+			'json'
+		)
+	}
+}
+</script>

@@ -1,0 +1,49 @@
+<div class="modal fade" id="siteAlertAssessorModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Alert Assessor Email</h4>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" id="siteForm">
+			<div class="form-group">
+			  <label class="col-lg-4 control-label">Email Content</label>
+			  <div class="col-lg-8">
+				<textarea rows="5" class="form-control" name="emailContent" placeholder="Content"></textarea>
+				<input type="text" class="hide" name="siteLongId">
+			  </div>
+			</div>
+		</form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" id="alertAssessorModalBtn">Send Alert Email</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+$('#alertAssessorModalBtn').bind('click', function(){
+	$postData = {
+		siteLongId:cm.inVal('#siteAlertAssessorModal', 'siteLongId'), 
+		emailContent:cm.taVal('#siteAlertAssessorModal', 'emailContent')
+	};
+	console.log($postData);
+	$.post(
+		'/coordinator/alertAssessor',
+		$postData,
+		alertAssessorPostResult,
+		'json'
+	)
+});
+
+function alertAssessorForm(siteLongId){
+	cm.setInVal('#siteAlertAssessorModal', 'siteLongId', siteLongId);
+}
+function alertAssessorPostResult(json){
+	if (json.length > 1){
+		cm.alert(json[0], json[1]);
+	}
+}
+</script>

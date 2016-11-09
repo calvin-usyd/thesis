@@ -1,0 +1,148 @@
+<div class="modal fade" id="siteStudentModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Student</h4>
+      </div>
+      <div class="modal-body">
+	    <a href="#" id="download_selected" class="btn btn-default pull-right"><span class="glyphicon glyphicon-download-alt"></span> Download selected</a>
+		<a href="#" id="deselect_all" class="btn btn-default pull-right"><span class="glyphicon glyphicon-unchecked"></span> de-Select all</a>
+		<a href="#" id="select_all" class="btn btn-default pull-right"><span class="glyphicon glyphicon-ok"></span> Select all</a>
+		<table class="table table-striped table-hover sortable" id="siteStudentTbl">
+		  <thead>
+			<tr>
+			  <!--th>#</th-->
+			  <th>Id</th>
+			  <th>Student</th>
+			  <!--th>Email</th-->
+			  <th>Project Id</th>
+			  <th>Submit Date</th>
+			  <th>Thesis</th>
+			  <th class="sorttable_nosort">Download</th>
+			</tr>
+		  </thead>
+		  <tbody></tbody>
+		</table>
+      </div>
+      <div class="modal-footer"></div>
+    </div>
+  </div>
+</div>
+<script>
+var allUrlArr = [];
+var selectedUrlArr = [];
+var allUrlStr = '';
+
+function addDownloadUrl(id, url){
+	selectedUrlArr.push(url);
+	
+	$('#download_selected').attr('data-files', '/'+_.join(selectedUrlArr, ' /'));
+	
+	$('#'+id + ' .btnSelection')
+	.addClass('glyphicon-ok btn-success')
+	.removeClass('glyphicon-unchecked btn-warning')
+	.attr('onclick', 'removeDownloadUrl("'+id+'","'+url+'")');
+}
+function removeDownloadUrl(id, url){
+	selectedUrlArr = _.filter(selectedUrlArr, url);
+	$('#download_selected').attr('data-files', '/'+_.join(selectedUrlArr, ' /'));
+	
+	$('#'+id + ' .btnSelection')
+	.addClass('glyphicon-unchecked btn-warning')
+	.removeClass('glyphicon-ok btn-success')
+	.attr('onclick', 'addDownloadUrl("'+id+'","'+url+'")');
+}
+function viewStudent(siteLongId){
+	$.post(
+		'/coordinator/studentURLList',
+		{siteLongId:siteLongId},
+		reloadStudentList,
+		'json'
+	)
+}
+function reloadStudentList(json){
+	var listHolder = $('#siteStudentTbl tbody');
+	listHolder.empty();
+	
+	var dataArray = (json instanceof Object) ? json : JSON.parse(json);
+	//var allUrls = '';
+	
+	_.forEach(dataArray['student'], function(o, k){
+		var tr = $('<tr>').attr('id', k);
+		var studentProj = dataArray['studentProj'][o.studentEmail];
+		var projName='', url='', submitDate='';
+		
+		if (studentProj){
+			projName=studentProj.name;
+			url=studentProj.url;
+			submitDate=studentProj.submitDate;
+		}
+		
+		//$('<td>').html(k+1).appendTo(tr);
+		$('<td>').html(o.id).appendTo(tr);
+		$('<td>').html(o.fname +' '+ o.lname +'<br/> '+ o.studentEmail).appendTo(tr);
+		//$('<td>').html(o.studentEmail).appendTo(tr);
+		$('<td>').html(o.projectId).appendTo(tr);
+		$('<td>').html(submitDate).appendTo(tr);
+		
+		
+		var btnSpan = $('<span class="glyphicon btn btnSelection"/>');
+		
+		btnSpan
+		.addClass('glyphicon-unchecked btn-warning')
+		.attr('data-id', k)
+		.attr('data-url', url)
+		.attr('onclick', 'addDownloadUrl("'+k+'","'+url+'")')
+		;
+		
+		if (url == ''){
+			$('<td>').html('').appendTo(tr);
+			$('<td>').html('').appendTo(tr);
+		}else{
+			$('<td>').html('<a href="'+url+'" target="_blank" class="pdfUrl" download>'+projName+'</a>').appendTo(tr);
+			allUrlStr = '/' + url + ' ' + allUrlStr;
+			$('<td>').html(btnSpan).appendTo(tr);
+		}
+		
+		tr.appendTo(listHolder);
+	});
+}
+
+$('#select_all').on('click', function () {
+	$('#download_selected').attr('data-files', allUrlStr);
+	
+	var btnS = $('.btnSelection')
+		.addClass('glyphicon-ok btn-success')
+		.removeClass('glyphicon-unchecked btn-warning');
+	
+	_.every(btnS, function(o){
+		console.log(o);
+		var id=$(o).attr('data-id');
+		var url=$(o).attr('data-url');
+		$(o).attr('onclick', 'removeDownloadUrl("'+id+'","'+url+'")');
+		
+		return true;
+	});
+});
+$('#deselect_all').on('click', function () {
+	$('#download_selected').attr('data-files', '');
+	
+	var btnS = $('.btnSelection')
+		.addClass('glyphicon-unchecked btn-warning')
+		.removeClass('glyphicon-ok btn-success');
+	
+	_.every(btnS, function(o){
+		var id=$(o).attr('data-id');
+		var url=$(o).attr('data-url');
+		$(o).attr('onclick', 'addDownloadUrl("'+id+'","'+url+'")');
+		
+		return true;
+	});
+});
+$('#download_selected').on('click', function () {
+	var files = $(this).data('files').trim().split(' ');
+	console.log(files);
+	multiDownload(files);
+});
+</script>

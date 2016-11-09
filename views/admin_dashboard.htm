@@ -1,0 +1,56 @@
+<div>
+
+  <!-- Nav tabs -->
+  <ul class="nav nav-tabs" role="tablist">
+    <li role="presentation" class="active"><a href="#site" role="tab" data-toggle="tab">Site</a></li>
+    <li role="presentation"><a href="#coordinator" role="tab" data-toggle="tab">Course Coordinator</a></li>
+  </ul>
+
+  <!-- Tab panes -->
+  <div class="tab-content">
+    <div role="tabpanel" class="tab-pane active" id="site">
+		<button class="btn btn-info btn-lg pull-right" id="reloadCoordinatorBtn"><span class="glyphicon glyphicon-refresh"></span> Reload</button>
+		<table class="table table-striped table-hover sortable">
+		  <thead>
+			<tr>
+			  <th>Name</th>
+			  <th>Status</th>
+			  <th>Course Coordinator</th>
+			</tr>
+		  </thead>
+		  <tbody>
+			<repeat group="{{@results}}" value="{{@val}}" key="{{@key}}">
+			<tr>
+			  <td>{{@val.name}}</td>
+			  <td>{{@val.status}}</td>
+			  <td>{{@val.username}}</td>
+			</tr>
+			</repeat>
+		  </tbody>
+		</table>
+	</div>
+    <div role="tabpanel" class="tab-pane" id="coordinator">
+		<button class="btn btn-info btn-lg pull-right" data-toggle="modal" data-target="#addCoordinatorModal" id="addCoordinatorBtn"><span class="glyphicon glyphicon-plus-sign"></span> Add New</button>
+		<table class="table table-striped table-hover sortable" id="coordinateTbl">
+		  <thead>
+			<tr>
+			  <th>First Name</th>
+			  <th>Last Name</th>
+			  <th>Email</th>
+			  <th class="sorttable_nosort">Edit</th>
+			  <th class="sorttable_nosort">Delete</th>
+			</tr>
+		  </thead>
+		  <tbody></tbody>
+		</table> 
+	</div>
+  </div>
+
+</div>
+<include href="admin_coordinator.htm"/>
+<!--include href="z_account.htm"/-->
+<script>
+$('#reloadCoordinatorBtn').bind('click', function(){
+	location.reload();
+});
+</script>

@@ -1,0 +1,159 @@
+<div role="tabpanel" class="tab-pane active" id="site">
+	<button class="btn btn-info btn-lg pull-right" data-toggle="modal" data-target="#addSiteModal" id="addSiteBtn"><span class="glyphicon glyphicon-plus-sign"></span> Add New</button>
+	<table class="table table-striped table-hover sortable" id="siteTbl">
+	  <thead>
+		<tr>
+		  <th>Name</th>
+		  <th>Status</th>
+		  <th>Due Date</th>
+		  <th class="sorttable_nosort">Student</th>
+		  <th class="sorttable_nosort">Edit</th>
+		  <th class="sorttable_nosort">Delete</th>
+		  <th class="sorttable_nosort">Alert Assessor</th>
+		</tr>
+	  </thead>
+	  <tbody></tbody>
+	</table>
+</div>
+
+<include href="coordinator_siteStudent.htm"/>
+<include href="coordinator_siteAlertAssessor.htm"/>
+
+<div class="modal fade" id="addSiteModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title"><span id="siteAction"></span> Site</h4>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" id="siteForm">
+			<div class="form-group">
+			  <label class="col-lg-4 control-label">Name</label>
+			  <div class="col-lg-8">
+				<input type="text" class="form-control" name="name" placeholder="Name">
+				<input type="text" class="hide" name="siteLongId">
+			  </div>
+			</div>
+			<div class="form-group">
+			  <label class="col-lg-4 control-label">Status</label>
+			  <div class="col-lg-8">
+				<select class="form-control" name="status">
+					<option value="active">Active</option>
+					<option value="inactive">Inactive</option>
+				</select>
+			  </div>
+			</div>
+			<div class="form-group">
+			  <label class="col-lg-4 control-label">Due Date</label>
+			  <div class="col-lg-8">
+				<input type="date" class="form-control" name="expired">
+			  </div>
+			</div>
+		</form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" data-dismiss="modal" id="addSiteModalBtn">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+$(function(){
+	$('#addSiteBtn').bind('click', function(){
+		var id='#siteForm';
+		cm.inValEmpty(id, ['siteLongId', 'name', 'status', 'expired']);
+		$('#siteAction').html('Add');
+		$('#addSiteModalBtn').html('Add New');
+	});
+	
+	$('#addSiteModalBtn').bind('click', function(){
+		var id='#siteForm';
+		var postData = {
+			siteLongId:cm.inVal(id, 'siteLongId'),
+			name:cm.inVal(id, 'name'),
+			expired:cm.inVal(id, 'expired'),
+			status:cm.inSelVal(id, 'status')
+		};
+		$.post(
+			'/coordinator/siteAddEdit',
+			postData,
+			reloadSiteList,
+			'json'
+		);
+		
+		cm.inValEmpty(id, ['siteLongId', 'name', 'status', 'expired']);
+	});
+	
+	$.post(
+		'/coordinator/siteList',
+		null,
+		reloadSiteList,
+		'json'
+	);
+});
+
+var activeSite = {};
+
+function reloadSiteList(json){
+	if (json[0] == 'fail'){
+		var alertDanger = $('#alertDanger').clone();
+		alertDanger.attr('id', '').removeClass('hide');
+		
+		var msg = alertDanger.find('.message');
+		msg.html(json[1]);
+		
+		alertDanger.appendTo($('#alertHolder')[0]);
+		
+		return;
+	}
+	var activeCount = 0;
+	var dataArray = (json instanceof Object) ? json : JSON.parse(json);
+	var listHolder = $('#siteTbl tbody');
+	listHolder.empty();
+	
+	_.forEach(dataArray, function(o, k){
+		if (o.status == 'active'){
+			activeCount++;
+			activeSite = {siteLongId:o.siteLongId, siteName:o.name};
+		}
+		var tr = $('<tr>');
+		
+		//$('<td>').html(k+1).appendTo(tr);
+		$('<td>').html(o.name).appendTo(tr);
+		$('<td>').html(o.status).appendTo(tr);
+		$('<td>').html(o.expired).appendTo(tr);
+		$('<td><button class="btn btn-info" data-toggle="modal" data-target="#siteStudentModal"><span class="glyphicon glyphicon-user"></span></button></td>').attr('onclick', 'viewStudent("'+o.siteLongId+'")').appendTo(tr);
+		$('<td><button class="btn btn-success" data-toggle="modal" data-target="#addSiteModal"><span class="glyphicon glyphicon-edit"></span></button></td>').attr('onclick', 'editSite("'+o.siteLongId+'","'+o.name+'","'+o.status+'","'+o.expired+'")').appendTo(tr);
+		$('<td><button class="btn btn-danger"><span class="glyphicon glyphicon-trash"></span></button></td>').attr('onclick', 'deleteSite("'+o.siteLongId+'")').appendTo(tr);
+		$('<td><button class="btn btn-warning" data-toggle="modal" data-target="#siteAlertAssessorModal"><span class="glyphicon glyphicon-envelope"></span></button></td>').attr('onclick', 'alertAssessorForm("'+o.siteLongId+'")').appendTo(tr);
+		
+		tr.appendTo(listHolder);
+	});
+	
+	if (activeCount > 1){
+		cm.alert('Warning', 'There are move than one active site!')
+	}
+
+}
+function editSite(siteLongId, name, status, expired){
+	var id='#siteForm';
+	cm.setInVal(id, 'siteLongId', siteLongId);
+	cm.setInVal(id, 'name', name);
+	cm.setInVal(id, 'expired', expired);
+	cm.setSelVal(id, 'status', status);
+	$('#siteAction').html('Edit');
+	$('#addSiteModalBtn').html('Edit');
+}
+function deleteSite(id){
+	if (confirm('Are you sure to delete this site?')){
+		$.post(
+			'/coordinator/siteDelete',
+			{siteLongId:id},
+			reloadSiteList,
+			'json'
+		)
+	}
+}
+</script>
